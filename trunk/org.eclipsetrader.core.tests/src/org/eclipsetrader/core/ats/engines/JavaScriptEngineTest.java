@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2011 Marco Maccaferri and others.
+ * Copyright (c) 2004-2012 Marco Maccaferri and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -148,5 +148,23 @@ public class JavaScriptEngineTest extends TestCase {
 
         result = cx.evaluateString(context.getScope(), "positions['MSFT'].quantity;", strategy.getName(), 1, null);
         assertEquals(2000L, result);
+    }
+
+    public void testInstrumentComparison() throws Exception {
+        JavaScriptEngine runner = new JavaScriptEngine(new TradingSystem(strategy), context);
+
+        runner.start();
+
+        JavaScriptEngineInstrument context = runner.getContextFor(instrument2);
+
+        Object result = context.get("instruments");
+        assertNotSame(UniqueTag.NOT_FOUND, result);
+
+        Object result1 = cx.evaluateString(context.getScope(), "instrument;", strategy.getName(), 1, null);
+        Object result2 = cx.evaluateString(runner.getScope(), "instruments['MSFT'];", strategy.getName(), 1, null);
+        assertSame(result1, result2);
+
+        result = cx.evaluateString(context.getScope(), "instrument == instruments['MSFT'];", strategy.getName(), 1, null);
+        assertEquals(Boolean.TRUE, result);
     }
 }
