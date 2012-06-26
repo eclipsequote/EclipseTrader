@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2011 Marco Maccaferri and others.
+ * Copyright (c) 2004-2012 Marco Maccaferri and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -53,7 +53,7 @@ public class JavaScriptEngine extends Observable {
     private final IBroker broker;
 
     private ScriptableObject scope;
-    private Map<String, ISecurity> instrumentsMap = new HashMap<String, ISecurity>();
+    private Map<String, Object> instrumentsMap = new HashMap<String, Object>();
     private Map<Object, IPosition> positionsMap = new HashMap<Object, IPosition>();
     private Map<ISecurity, JavaScriptEngineInstrument> contextsMap = new HashMap<ISecurity, JavaScriptEngineInstrument>();
 
@@ -136,7 +136,6 @@ public class JavaScriptEngine extends Observable {
 
             ScriptableObject.putProperty(scope, "out", Context.javaToJS(System.out, scope));
 
-            updateInstrumentsMap();
             updatePositionsMap();
 
             int backfillSize = context.getInitialBackfillSize();
@@ -147,9 +146,16 @@ public class JavaScriptEngine extends Observable {
                 if (backfillSize != 0) {
                     engineInstrument.backfill(backfillSize);
                 }
+                if (security.getIdentifier() != null) {
+                    Object jsInstrument = engineInstrument.getScope().get(BaseOrderFunction.PROPERTY_INSTRUMENT, engineInstrument.getScope());
+                    instrumentsMap.put(security.getIdentifier().getSymbol(), jsInstrument);
+                }
                 engineInstrument.setPosition(positionsMap.get(security));
-                engineInstrument.onStrategyStart();
                 contextsMap.put(instrument.getInstrument(), engineInstrument);
+            }
+
+            for (JavaScriptEngineInstrument engineInstrument : contextsMap.values()) {
+                engineInstrument.onStrategyStart();
             }
 
             account.addPositionListener(positionListener);
@@ -161,6 +167,9 @@ public class JavaScriptEngine extends Observable {
 
     public void stop() {
         contextsMap.clear();
+
+        instrumentsMap.clear();
+        positionsMap.clear();
 
         account.removePositionListener(positionListener);
         pricingEnvironment.removePricingListener(pricingListener);
@@ -198,15 +207,6 @@ public class JavaScriptEngine extends Observable {
                 instrument.onBar((IBar) value);
                 setChanged();
                 notifyObservers(new EngineEvent(event.getSecurity(), instrument.getBars()));
-            }
-        }
-    }
-
-    private void updateInstrumentsMap() {
-        instrumentsMap.clear();
-        for (ISecurity security : strategy.getInstruments()) {
-            if (security.getIdentifier() != null) {
-                instrumentsMap.put(security.getIdentifier().getSymbol(), security);
             }
         }
     }
