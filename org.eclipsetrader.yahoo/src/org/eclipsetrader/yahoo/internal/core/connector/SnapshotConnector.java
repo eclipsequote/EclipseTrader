@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2011 Marco Maccaferri and others.
+ * Copyright (c) 2004-2013 Marco Maccaferri and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -39,10 +39,6 @@ import org.eclipsetrader.core.feed.IConnectorListener;
 import org.eclipsetrader.core.feed.IFeedConnector;
 import org.eclipsetrader.core.feed.IFeedIdentifier;
 import org.eclipsetrader.core.feed.IFeedSubscription;
-import org.eclipsetrader.core.feed.LastClose;
-import org.eclipsetrader.core.feed.Quote;
-import org.eclipsetrader.core.feed.TodayOHL;
-import org.eclipsetrader.core.feed.Trade;
 import org.eclipsetrader.yahoo.internal.YahooActivator;
 import org.eclipsetrader.yahoo.internal.core.Util;
 import org.eclipsetrader.yahoo.internal.core.repository.IdentifierType;
@@ -303,7 +299,7 @@ public class SnapshotConnector implements Runnable, IFeedConnector, IExecutableE
             priceData.setTime(getDateValue(elements[I_DATE], elements[I_TIME]));
             priceData.setLast(getDoubleValue(elements[I_LAST]));
             priceData.setVolume(getLongValue(elements[I_VOLUME]));
-            subscription.setTrade(new Trade(priceData.getTime(), priceData.getLast(), null, priceData.getVolume()));
+            subscription.setTrade(priceData.getTime(), priceData.getLast(), null, priceData.getVolume());
 
             priceData.setBid(getDoubleValue(elements[I_BID]));
             if (!isStaleUpdate) {
@@ -313,17 +309,17 @@ public class SnapshotConnector implements Runnable, IFeedConnector, IExecutableE
             if (!isStaleUpdate) {
                 priceData.setAskSize(null); // getLongValue(elements[I_ASK_SIZE]));
             }
-            subscription.setQuote(new Quote(priceData.getBid(), priceData.getAsk(), priceData.getBidSize(), priceData.getAskSize()));
+            subscription.setQuote(priceData.getBid(), priceData.getAsk(), priceData.getBidSize(), priceData.getAskSize());
 
             priceData.setOpen(getDoubleValue(elements[I_OPEN]));
             priceData.setHigh(getDoubleValue(elements[I_HIGH]));
             priceData.setLow(getDoubleValue(elements[I_LOW]));
             if (priceData.getOpen() != null && priceData.getOpen() != 0.0 && priceData.getHigh() != null && priceData.getHigh() != 0.0 && priceData.getLow() != null && priceData.getLow() != 0.0) {
-                subscription.setTodayOHL(new TodayOHL(priceData.getOpen(), priceData.getHigh(), priceData.getLow()));
+                subscription.setTodayOHL(priceData.getOpen(), priceData.getHigh(), priceData.getLow());
             }
 
             priceData.setClose(getDoubleValue(elements[I_CLOSE]));
-            subscription.setLastClose(new LastClose(priceData.getClose(), null));
+            subscription.setLastClose(priceData.getClose(), null);
         }
     }
 

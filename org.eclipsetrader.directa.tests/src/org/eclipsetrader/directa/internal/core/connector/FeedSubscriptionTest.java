@@ -9,23 +9,15 @@
  *     Marco Maccaferri - initial API and implementation
  */
 
-package org.eclipsetrader.yahoo.internal.core.connector;
+package org.eclipsetrader.directa.internal.core.connector;
 
 import java.util.Date;
 
 import junit.framework.TestCase;
 
-import org.eclipsetrader.yahoo.internal.core.repository.IdentifierType;
+import org.eclipsetrader.directa.internal.core.repository.IdentifierType;
 
 public class FeedSubscriptionTest extends TestCase {
-
-    public void testDispose() throws Exception {
-        SnapshotConnector connector = new SnapshotConnector();
-        FeedSubscription subscription = new FeedSubscription(connector, new IdentifierType("ID"));
-        connector.symbolSubscriptions.put("ID", subscription);
-        subscription.dispose();
-        assertNull(connector.symbolSubscriptions.get("ID"));
-    }
 
     public void testIncrementInstanceCount() throws Exception {
         FeedSubscription subscription = new FeedSubscription(null, new IdentifierType("ID"));
