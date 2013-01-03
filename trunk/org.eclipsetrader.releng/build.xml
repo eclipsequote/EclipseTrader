@@ -1,8 +1,8 @@
 <project name="Product Build">
     <property name="eclipse.home" value="${user.home}/eclipse"/>
     <property name="buildDirectory" value="${user.home}/eclipsetrader.build"/>
-    <property name="baseLocation" value="${user.home}/eclipse-platform-3.7"/>
-    <property name="pluginPath" value="${user.home}/eclipse-platform-3.7-nls"/>
+    <property name="baseLocation" value="${user.home}/eclipse-platform-3.8"/>
+    <property name="pluginPath" value="${user.home}/eclipse-platform-3.8-nls"/>
 
     <available file="${buildDirectory}/label.properties" property="label.properties.exists" />
     <property file="${buildDirectory}/label.properties" />

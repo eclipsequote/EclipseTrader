@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<?pde version="3.4"?>
+<?pde version="3.5"?>
 
-<product name="EclipseTrader" id="org.eclipsetrader.platform.workbench" application="org.eclipsetrader.ui.workbench" version="1.0.0.qualifier" useFeatures="true">
+<product name="EclipseTrader" id="org.eclipsetrader.platform.workbench" application="org.eclipsetrader.ui.workbench" version="1.0.0.qualifier" useFeatures="true" includeLaunchers="true">
 
    <aboutInfo>
       <image path="/org.eclipsetrader.platform/about.gif"/>
@@ -14,6 +14,10 @@
    </configIni>
 
    <launcherArgs>
+      <vmArgs>-Xms40m
+-Xmx128M
+-XX:MaxPermSize=64M</vmArgs>
+      <vmArgsLin>-Dorg.eclipse.swt.internal.gtk.useCairo=false</vmArgsLin>
    </launcherArgs>
 
    <windowImages i16="/org.eclipsetrader.platform/eclipse.gif" i32="/org.eclipsetrader.platform/eclipse32.gif" i48="/org.eclipsetrader.platform/eclipse48.gif"/>
@@ -133,21 +137,21 @@ Java and all Java-based trademarks are trademarks of Oracle Corporation in the U
    </plugins>
 
    <features>
-      <feature id="org.apache.commons" version="0.0.0"/>
-      <feature id="org.apache.log4j" version="0.0.0"/>
-      <feature id="org.jdom" version="0.0.0"/>
-      <feature id="org.htmlparser" version="0.0.0"/>
-      <feature id="com.tictactec.ta.lib" version="0.0.0"/>
-      <feature id="com.sun.syndication" version="0.0.0"/>
-      <feature id="org.mozilla.rhino" version="0.0.0"/>
-      <feature id="org.eclipse.rcp" version="0.0.0"/>
-      <feature id="org.eclipse.help" version="0.0.0"/>
-      <feature id="org.eclipse.equinox.p2.user.ui" version="0.0.0"/>
-      <feature id="org.eclipsetrader.platform" version="0.0.0"/>
-      <feature id="org.eclipsetrader.directaworld" version="0.0.0"/>
-      <feature id="org.eclipsetrader.yahoo" version="0.0.0"/>
-      <feature id="org.eclipsetrader.brokers.paper" version="0.0.0"/>
-      <feature id="org.eclipsetrader.directa" version="0.0.0"/>
+      <feature id="org.apache.commons"/>
+      <feature id="org.apache.log4j"/>
+      <feature id="org.jdom"/>
+      <feature id="org.htmlparser"/>
+      <feature id="com.tictactec.ta.lib"/>
+      <feature id="com.sun.syndication"/>
+      <feature id="org.mozilla.rhino"/>
+      <feature id="org.eclipse.rcp"/>
+      <feature id="org.eclipse.help"/>
+      <feature id="org.eclipse.equinox.p2.user.ui"/>
+      <feature id="org.eclipsetrader.platform"/>
+      <feature id="org.eclipsetrader.directaworld"/>
+      <feature id="org.eclipsetrader.yahoo"/>
+      <feature id="org.eclipsetrader.brokers.paper"/>
+      <feature id="org.eclipsetrader.directa"/>
    </features>
 
    <configurations>
