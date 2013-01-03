@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2011 Marco Maccaferri and others.
+ * Copyright (c) 2004-2013 Marco Maccaferri and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -65,12 +65,8 @@ import org.eclipsetrader.core.feed.IFeedConnector2;
 import org.eclipsetrader.core.feed.IFeedIdentifier;
 import org.eclipsetrader.core.feed.IFeedSubscription;
 import org.eclipsetrader.core.feed.IFeedSubscription2;
-import org.eclipsetrader.core.feed.LastClose;
-import org.eclipsetrader.core.feed.Quote;
 import org.eclipsetrader.core.feed.QuoteDelta;
 import org.eclipsetrader.core.feed.TimeSpan;
-import org.eclipsetrader.core.feed.TodayOHL;
-import org.eclipsetrader.core.feed.Trade;
 import org.eclipsetrader.directa.internal.Activator;
 import org.eclipsetrader.directa.internal.core.WebConnector;
 import org.eclipsetrader.directa.internal.core.messages.AstaApertura;
@@ -714,7 +710,7 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
             priceData.setLastSize(pm.qta_ult);
             priceData.setVolume(pm.qta_prgs);
             priceData.setTime(new Date(pm.ora_ult));
-            subscription.setTrade(new Trade(priceData.getTime(), priceData.getLast(), priceData.getLastSize(), priceData.getVolume()));
+            subscription.setTrade(priceData.getTime(), priceData.getLast(), priceData.getLastSize(), priceData.getVolume());
 
             priceData.setHigh(pm.max);
             priceData.setLow(pm.min);
@@ -733,7 +729,7 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
             }
 
             if (priceData.getOpen() != null && priceData.getOpen() != 0.0 && priceData.getHigh() != 0.0 && priceData.getLow() != 0.0) {
-                subscription.setTodayOHL(new TodayOHL(priceData.getOpen(), priceData.getHigh(), priceData.getLow()));
+                subscription.setTodayOHL(priceData.getOpen(), priceData.getHigh(), priceData.getLow());
             }
         }
         else if (obj instanceof Book) {
@@ -782,7 +778,7 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
             priceData.setBidSize(bam.num_bid);
             priceData.setAsk(bam.ask);
             priceData.setAskSize(bam.num_ask);
-            subscription.setQuote(new Quote(priceData.getBid(), priceData.getAsk(), priceData.getBidSize(), priceData.getAskSize()));
+            subscription.setQuote(priceData.getBid(), priceData.getAsk(), priceData.getBidSize(), priceData.getAskSize());
         }
         else if (obj instanceof AstaApertura) {
             AstaApertura ap = (AstaApertura) obj;
@@ -794,13 +790,13 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
             if (priceData.getClose() != null) {
                 priceData.setLastClose(priceData.getClose());
                 priceData.setClose(null);
-                subscription.setLastClose(new LastClose(priceData.getLastClose(), null));
+                subscription.setLastClose(priceData.getLastClose(), null);
             }
             if (priceData.getOpen() != null) {
                 priceData.setOpen(null);
                 priceData.setHigh(null);
                 priceData.setLow(null);
-                subscription.setTodayOHL(new TodayOHL(priceData.getOpen(), priceData.getHigh(), priceData.getLow()));
+                subscription.setTodayOHL(priceData.getOpen(), priceData.getHigh(), priceData.getLow());
             }
         }
         else if (obj instanceof AstaChiusura) {
@@ -989,7 +985,7 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
             double tradePrice = Double.parseDouble(sVal.get(TRADE));
             if (tradePrice != 0.0) {
                 priceData.setLast(tradePrice);
-                subscription.setTrade(new Trade(priceData.getTime(), priceData.getLast(), priceData.getLastSize(), priceData.getVolume()));
+                subscription.setTrade(priceData.getTime(), priceData.getLast(), priceData.getLastSize(), priceData.getVolume());
             }
             else {
                 subscription.setPrice(new org.eclipsetrader.core.feed.Price(priceData.getTime(), Double.parseDouble(sVal.get(PREZZO))));
@@ -999,11 +995,11 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
                 priceData.setLast(priceData.getLastClose());
             }
 
-            subscription.setQuote(new Quote(priceData.getBid(), priceData.getAsk(), priceData.getBidSize(), priceData.getAskSize()));
+            subscription.setQuote(priceData.getBid(), priceData.getAsk(), priceData.getBidSize(), priceData.getAskSize());
             if (priceData.getOpen() != 0.0 && priceData.getHigh() != 0.0 && priceData.getLow() != 0.0) {
-                subscription.setTodayOHL(new TodayOHL(priceData.getOpen(), priceData.getHigh(), priceData.getLow()));
+                subscription.setTodayOHL(priceData.getOpen(), priceData.getHigh(), priceData.getLow());
             }
-            subscription.setLastClose(new LastClose(priceData.getLastClose(), null));
+            subscription.setLastClose(priceData.getLastClose(), null);
         }
     }
 

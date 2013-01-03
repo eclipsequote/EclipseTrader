@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2011 Marco Maccaferri and others.
+ * Copyright (c) 2004-2013 Marco Maccaferri and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -12,6 +12,7 @@
 package org.eclipsetrader.directa.internal.core.connector;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 import org.eclipse.core.runtime.IStatus;
@@ -26,8 +27,12 @@ import org.eclipsetrader.core.feed.IQuote;
 import org.eclipsetrader.core.feed.ISubscriptionListener;
 import org.eclipsetrader.core.feed.ITodayOHL;
 import org.eclipsetrader.core.feed.ITrade;
+import org.eclipsetrader.core.feed.LastClose;
+import org.eclipsetrader.core.feed.Quote;
 import org.eclipsetrader.core.feed.QuoteDelta;
 import org.eclipsetrader.core.feed.QuoteEvent;
+import org.eclipsetrader.core.feed.TodayOHL;
+import org.eclipsetrader.core.feed.Trade;
 import org.eclipsetrader.directa.internal.Activator;
 import org.eclipsetrader.directa.internal.core.repository.IdentifierType;
 
@@ -42,7 +47,7 @@ public class FeedSubscription implements IFeedSubscription2 {
     private IBook book;
     private ListenerList listeners = new ListenerList(ListenerList.IDENTITY);
     private IdentifierType identifierType;
-    private List<QuoteDelta> deltaList = new ArrayList<QuoteDelta>();
+    List<QuoteDelta> deltaList = new ArrayList<QuoteDelta>();
     private int instanceCount = 0;
     private int level2InstanceCount = 0;
 
@@ -139,8 +144,9 @@ public class FeedSubscription implements IFeedSubscription2 {
         return quote;
     }
 
-    public void setQuote(IQuote quote) {
-        if (!quote.equals(this.quote)) {
+    public void setQuote(Double bid, Double ask, Long bidSize, Long askSize) {
+        if (!equals(bid, quote.getBid()) || !equals(ask, quote.getAsk()) || !equals(bidSize, quote.getBidSize()) || !equals(askSize, quote.getAskSize())) {
+            IQuote quote = new Quote(bid, ask, bidSize, askSize);
             addDelta(new QuoteDelta(identifierType.getIdentifier(), this.quote, quote));
             this.quote = quote;
             this.identifierType.setQuote(quote);
@@ -155,8 +161,9 @@ public class FeedSubscription implements IFeedSubscription2 {
         return todayOHL;
     }
 
-    public void setTodayOHL(ITodayOHL todayOHL) {
-        if (!todayOHL.equals(this.todayOHL)) {
+    public void setTodayOHL(Double open, Double high, Double low) {
+        if (todayOHL == null || !equals(open, todayOHL.getOpen()) || !equals(high, todayOHL.getHigh()) || !equals(low, todayOHL.getLow())) {
+            ITodayOHL todayOHL = new TodayOHL(open, high, low);
             addDelta(new QuoteDelta(identifierType.getIdentifier(), this.todayOHL, todayOHL));
             this.todayOHL = todayOHL;
             this.identifierType.setTodayOHL(todayOHL);
@@ -171,8 +178,9 @@ public class FeedSubscription implements IFeedSubscription2 {
         return trade;
     }
 
-    public void setTrade(ITrade trade) {
-        if (!trade.equals(this.trade)) {
+    public void setTrade(Date time, Double price, Long size, Long volume) {
+        if (!equals(time, trade.getTime()) || !equals(price, trade.getPrice()) || !equals(size, trade.getSize()) || !equals(volume, trade.getVolume())) {
+            ITrade trade = new Trade(time, price, size, volume);
             addDelta(new QuoteDelta(identifierType.getIdentifier(), this.trade, trade));
             this.trade = trade;
             this.identifierType.setTrade(trade);
@@ -196,8 +204,9 @@ public class FeedSubscription implements IFeedSubscription2 {
         return lastClose;
     }
 
-    public void setLastClose(ILastClose lastClose) {
-        if (!lastClose.equals(this.lastClose)) {
+    public void setLastClose(Double price, Date date) {
+        if (!equals(price, lastClose.getPrice()) || !equals(date, lastClose.getDate())) {
+            LastClose lastClose = new LastClose(price, date);
             addDelta(new QuoteDelta(identifierType.getIdentifier(), this.lastClose, lastClose));
             this.lastClose = lastClose;
             this.identifierType.setLastClose(lastClose);
@@ -255,5 +264,9 @@ public class FeedSubscription implements IFeedSubscription2 {
         synchronized (deltaList) {
             return deltaList.size() != 0;
         }
+    }
+
+    protected boolean equals(Object o1, Object o2) {
+        return o1 == o2 || o1 != null && o1.equals(o2);
     }
 }

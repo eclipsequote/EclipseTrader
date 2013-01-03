@@ -1,5 +1,5 @@
 /*
- * Copyright (calendar) 2004-2011 Marco Maccaferri and others.
+ * Copyright (calendar) 2004-2013 Marco Maccaferri and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -26,9 +26,6 @@ import org.apache.commons.httpclient.HttpMethod;
 import org.apache.commons.httpclient.MultiThreadedHttpConnectionManager;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
-import org.eclipsetrader.core.feed.Quote;
-import org.eclipsetrader.core.feed.TodayOHL;
-import org.eclipsetrader.core.feed.Trade;
 import org.eclipsetrader.yahoo.internal.YahooActivator;
 import org.eclipsetrader.yahoo.internal.core.Util;
 import org.eclipsetrader.yahoo.internal.core.repository.IdentifierType;
@@ -210,7 +207,7 @@ public class StreamingConnector extends SnapshotConnector {
             if (valueMap.containsKey(K_LAST)) {
                 priceData.setLast(getDoubleValue(valueMap.get(K_LAST)));
             }
-            subscription.setTrade(new Trade(priceData.getTime(), priceData.getLast(), priceData.getLastSize(), priceData.getVolume()));
+            subscription.setTrade(priceData.getTime(), priceData.getLast(), priceData.getLastSize(), priceData.getVolume());
 
             if (valueMap.containsKey(K_BID_PRICE)) {
                 priceData.setBid(getDoubleValue(valueMap.get(K_BID_PRICE)));
@@ -224,7 +221,7 @@ public class StreamingConnector extends SnapshotConnector {
             if (valueMap.containsKey(K_ASK_SIZE)) {
                 priceData.setAskSize(getLongValue(valueMap.get(K_ASK_SIZE)));
             }
-            subscription.setQuote(new Quote(priceData.getBid(), priceData.getAsk(), priceData.getBidSize(), priceData.getAskSize()));
+            subscription.setQuote(priceData.getBid(), priceData.getAsk(), priceData.getBidSize(), priceData.getAskSize());
 
             if (valueMap.containsKey(K_HIGH)) {
                 priceData.setHigh(getDoubleValue(valueMap.get(K_HIGH)));
@@ -236,7 +233,7 @@ public class StreamingConnector extends SnapshotConnector {
                 priceData.setVolume(getLongValue(valueMap.get(K_VOLUME)));
             }
             if (priceData.getOpen() != null && priceData.getOpen() != 0.0 && priceData.getHigh() != null && priceData.getHigh() != 0.0 && priceData.getLow() != null && priceData.getLow() != 0.0) {
-                subscription.setTodayOHL(new TodayOHL(priceData.getOpen(), priceData.getHigh(), priceData.getLow()));
+                subscription.setTodayOHL(priceData.getOpen(), priceData.getHigh(), priceData.getLow());
             }
 
             subscription.fireNotification();
