@@ -2,7 +2,7 @@
 #P org.eclipse.ui.workbench
 Index: Eclipse UI/org/eclipse/ui/internal/ViewSashContainer.java
 ===================================================================
---- Eclipse UI/org/eclipse/ui/internal/ViewSashContainer.java	(revisione 1609)
+--- Eclipse UI/org/eclipse/ui/internal/ViewSashContainer.java	(revisione 1689)
 +++ Eclipse UI/org/eclipse/ui/internal/ViewSashContainer.java	(copia locale)
 @@ -12,7 +12,6 @@
  
@@ -14,7 +14,7 @@ Index: Eclipse UI/org/eclipse/ui/internal/ViewSashContainer.java
  import org.eclipse.swt.widgets.Composite;
 Index: Eclipse UI/org/eclipse/ui/internal/PerspectiveHelper.java
 ===================================================================
---- Eclipse UI/org/eclipse/ui/internal/PerspectiveHelper.java	(revisione 1609)
+--- Eclipse UI/org/eclipse/ui/internal/PerspectiveHelper.java	(revisione 1689)
 +++ Eclipse UI/org/eclipse/ui/internal/PerspectiveHelper.java	(copia locale)
 @@ -99,6 +99,8 @@
  
@@ -98,7 +98,7 @@ Index: Eclipse UI/org/eclipse/ui/internal/PerspectiveHelper.java
              IMemento detachedWindows[] = memento
 Index: Eclipse UI/org/eclipse/ui/internal/Perspective.java
 ===================================================================
---- Eclipse UI/org/eclipse/ui/internal/Perspective.java	(revisione 1609)
+--- Eclipse UI/org/eclipse/ui/internal/Perspective.java	(revisione 1689)
 +++ Eclipse UI/org/eclipse/ui/internal/Perspective.java	(copia locale)
 @@ -1306,7 +1306,7 @@
          final PerspectiveHelper pres = presArray[0];
@@ -111,14 +111,14 @@ Index: Eclipse UI/org/eclipse/ui/internal/Perspective.java
          StartupThreading.runWithoutExceptions(new StartupRunnable() {
 Index: META-INF/MANIFEST.MF
 ===================================================================
---- META-INF/MANIFEST.MF	(revisione 1609)
+--- META-INF/MANIFEST.MF	(revisione 1689)
 +++ META-INF/MANIFEST.MF	(copia locale)
 @@ -2,7 +2,7 @@
  Bundle-ManifestVersion: 2
  Bundle-Name: %pluginName
  Bundle-SymbolicName: org.eclipse.ui.workbench; singleton:=true
--Bundle-Version: 3.7.0.qualifier
-+Bundle-Version: 3.7.0.I20111020-0925-ET
+-Bundle-Version: 3.8.1.qualifier
++Bundle-Version: 3.8.1.v20120816-082703-ET
  Bundle-ClassPath: e4-workbench.jar,
   compatibility.jar,
   .
