@@ -1,5 +1,5 @@
 /*
- * Copyright (calendar) 2004-2013 Marco Maccaferri and others.
+ * Copyright (calendar) 2004-2014 Marco Maccaferri and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -11,25 +11,30 @@
 
 package org.eclipsetrader.yahoo.internal.core.connector;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.util.ArrayList;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.httpclient.HttpClient;
 import org.apache.commons.httpclient.HttpMethod;
 import org.apache.commons.httpclient.MultiThreadedHttpConnectionManager;
+import org.apache.commons.httpclient.URI;
+import org.eclipse.core.net.proxy.IProxyData;
+import org.eclipse.core.net.proxy.IProxyService;
 import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.Status;
 import org.eclipsetrader.yahoo.internal.YahooActivator;
 import org.eclipsetrader.yahoo.internal.core.Util;
 import org.eclipsetrader.yahoo.internal.core.repository.IdentifierType;
 import org.eclipsetrader.yahoo.internal.core.repository.PriceDataType;
+import org.osgi.framework.BundleContext;
+import org.osgi.framework.ServiceReference;
 
 public class StreamingConnector extends SnapshotConnector {
 
@@ -48,6 +53,7 @@ public class StreamingConnector extends SnapshotConnector {
     private StringBuilder script;
     private boolean inTag;
     private boolean inScript;
+    private SocketChannel sc;
 
     public StreamingConnector() {
     }
@@ -63,26 +69,26 @@ public class StreamingConnector extends SnapshotConnector {
      * @see org.eclipsetrader.yahoo.internal.feed.SnapshotMarketFeed#run()
      */
     @Override
+    @SuppressWarnings({
+        "rawtypes", "unchecked"
+    })
     public void run() {
-        BufferedReader in = null;
-        char[] buffer = new char[512];
+        byte[] buffer = new byte[2048];
+        ByteBuffer bufferWrapper = ByteBuffer.wrap(buffer);
+        long lastActivity = System.currentTimeMillis();
 
         try {
             HttpClient client = new HttpClient(new MultiThreadedHttpConnectionManager());
             client.getHttpConnectionManager().getParams().setConnectionTimeout(5000);
             Util.setupProxy(client, Util.streamingFeedHost);
 
-            HttpMethod method = null;
-
             while (!isStopping()) {
                 // Check if the connection was not yet initialized or there are changed in the subscriptions.
-                if (in == null || isSubscriptionsChanged()) {
+                if (sc == null || isSubscriptionsChanged()) {
                     try {
-                        if (method != null) {
-                            method.releaseConnection();
-                        }
-                        if (in != null) {
-                            in.close();
+                        if (sc != null) {
+                            sc.close();
+                            sc = null;
                         }
                     } catch (Exception e) {
                         // We can't do anything at this time, ignore
@@ -98,44 +104,68 @@ public class StreamingConnector extends SnapshotConnector {
                             break;
                         }
                     }
-                    method = Util.getStreamingFeedMethod(symbols);
+                    HttpMethod method = Util.getStreamingFeedMethod(symbols);
+                    URI uri = method.getURI();
 
-                    client.executeMethod(method);
+                    Proxy socksProxy = Proxy.NO_PROXY;
+                    if (YahooActivator.getDefault() != null) {
+                        BundleContext context = YahooActivator.getDefault().getBundle().getBundleContext();
+                        ServiceReference reference = context.getServiceReference(IProxyService.class.getName());
+                        if (reference != null) {
+                            IProxyService proxyService = (IProxyService) context.getService(reference);
+                            IProxyData[] proxyData = proxyService.select(new java.net.URI(null, uri.getHost(), null, null));
+                            for (int i = 0; i < proxyData.length; i++) {
+                                if (IProxyData.SOCKS_PROXY_TYPE.equals(proxyData[i].getType()) && proxyData[i].getHost() != null) {
+                                    socksProxy = new Proxy(Proxy.Type.SOCKS, new InetSocketAddress(proxyData[i].getHost(), proxyData[i].getPort()));
+                                    break;
+                                }
+                            }
+                            context.ungetService(reference);
+                        }
+                    }
 
-                    in = new BufferedReader(new InputStreamReader(method.getResponseBodyAsStream()));
+                    // TODO Apply proxy configuration
+                    sc = SocketChannel.open(new InetSocketAddress(uri.getHost(), 80));
+
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(method.getName());
+                    sb.append(" ");
+                    sb.append(uri.getPathQuery());
+                    sb.append(" HTTP/1.0\r\n");
+
+                    sb.append("Host: ");
+                    sb.append(uri.getHost());
+                    sb.append("\r\n");
+
+                    sb.append("\r\n");
+
+                    sc.write(ByteBuffer.wrap(sb.toString().getBytes()));
+                    sc.configureBlocking(false);
 
                     line = new StringBuilder();
                     script = new StringBuilder();
                     inTag = false;
                     inScript = false;
+                    lastActivity = System.currentTimeMillis();
 
                     fetchLatestSnapshot(client, symbols, false);
                 }
 
-                if (in.ready()) {
-                    int length = in.read(buffer);
-                    if (length == -1) {
-                        in.close();
-                        in = null;
-                        continue;
-                    }
-                    processIncomingChars(buffer, length);
+                if (sc.read(bufferWrapper) > 0) {
+                    processIncomingChars(buffer, bufferWrapper.position());
+                    bufferWrapper.clear();
+                    lastActivity = System.currentTimeMillis();
                 }
                 else {
-                    // Check stale data
-                    List<String> updateList = new ArrayList<String>();
-                    synchronized (symbolSubscriptions) {
-                        long currentTime = System.currentTimeMillis();
-                        for (FeedSubscription subscription : symbolSubscriptions.values()) {
-                            long elapsedTime = currentTime - subscription.getIdentifierType().getLastUpdate();
-                            if (elapsedTime >= 60000) {
-                                updateList.add(subscription.getIdentifierType().getSymbol());
-                                subscription.getIdentifierType().setLastUpdate(currentTime / 60000 * 60000);
+                    if ((System.currentTimeMillis() - lastActivity) > 60000) {
+                        try {
+                            if (sc != null) {
+                                sc.close();
+                                sc = null;
                             }
+                        } catch (Exception e) {
+                            // We can't do anything at this time, ignore
                         }
-                    }
-                    if (updateList.size() != 0) {
-                        fetchLatestSnapshot(client, updateList.toArray(new String[updateList.size()]), true);
                     }
                 }
 
@@ -146,8 +176,9 @@ public class StreamingConnector extends SnapshotConnector {
             YahooActivator.log(status);
         } finally {
             try {
-                if (in != null) {
-                    in.close();
+                if (sc != null) {
+                    sc.close();
+                    sc = null;
                 }
             } catch (Exception e) {
                 // We can't do anything at this time, ignore
@@ -155,9 +186,9 @@ public class StreamingConnector extends SnapshotConnector {
         }
     }
 
-    protected void processIncomingChars(char[] chars, int length) {
+    protected void processIncomingChars(byte[] chars, int length) {
         for (int i = 0; i < length; i++) {
-            char ch = chars[i];
+            char ch = (char) chars[i];
             if (ch == '<' && !inTag) {
                 inTag = true;
             }
