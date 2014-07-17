@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2004-2013 Marco Maccaferri and others.
+ * Copyright (c) 2004-2014 Marco Maccaferri and others.
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License v1.0
  * which accompanies this distribution, and is available at
@@ -15,16 +15,15 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.BufferedReader;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.Proxy;
-import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.Collection;
@@ -126,9 +125,7 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
     private String streamingServer = "213.92.13.41"; //$NON-NLS-1$
     private int streamingPort = 8002;
     private String streamingVersion = "3.0"; //$NON-NLS-1$
-    private Socket socket;
-    private OutputStream os;
-    private DataInputStream is;
+    private SocketChannel sc;
     private Set<String> sTit;
     private Set<String> sTit2;
 
@@ -423,7 +420,6 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
         "rawtypes", "unchecked"
     })
     public void run() {
-        int n = 0;
         byte bHeader[] = new byte[4];
 
         sTit = new HashSet<String>();
@@ -447,16 +443,14 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
                     context.ungetService(reference);
                 }
             }
-            socket = new Socket(socksProxy);
-            socket.connect(new InetSocketAddress(streamingServer, streamingPort));
-            os = socket.getOutputStream();
-            is = new DataInputStream(socket.getInputStream());
+            // TODO Apply proxy configuration
+            sc = SocketChannel.open(new InetSocketAddress(streamingServer, streamingPort));
         } catch (Exception e) {
             Activator.log(new Status(IStatus.ERROR, Activator.PLUGIN_ID, 0, "Error connecting to streaming server", e)); //$NON-NLS-1$
             try {
-                if (socket != null) {
-                    socket.close();
-                    socket = null;
+                if (sc != null) {
+                    sc.close();
+                    sc = null;
                 }
             } catch (Exception e1) {
                 // Do nothing
@@ -466,26 +460,26 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
 
         // Login
         try {
-            os.write(CreaMsg.creaLoginMsg(WebConnector.getInstance().getUrt(), WebConnector.getInstance().getPrt(), "flashBook", streamingVersion)); //$NON-NLS-1$
-            os.flush();
+            sc.write(ByteBuffer.wrap(CreaMsg.creaLoginMsg(WebConnector.getInstance().getUrt(), WebConnector.getInstance().getPrt(), "flashBook", streamingVersion))); //$NON-NLS-1$
+            //os.flush();
 
             byte bHeaderLogin[] = new byte[4];
-            n = is.read(bHeaderLogin);
+            int n = sc.read(ByteBuffer.wrap(bHeaderLogin));
             int lenMsg = Util.getMessageLength(bHeaderLogin, 2);
             if ((char) bHeaderLogin[0] != '#' && n != -1) {
                 return;
             }
 
             byte msgResp[] = new byte[lenMsg];
-            is.read(msgResp);
+            sc.read(ByteBuffer.wrap(msgResp));
             if (Util.byteToInt(bHeaderLogin[1]) == CreaMsg.ERROR_MSG) {
                 ErrorMessage eMsg = new ErrorMessage(msgResp);
                 Activator.log(new Status(IStatus.ERROR, Activator.PLUGIN_ID, 0, "Error connecting to streaming server: " + eMsg.sMessageError, null)); //$NON-NLS-1$
                 return;
             }
             try {
-                os.write(CreaMsg.creaStartDataMsg());
-                os.flush();
+                sc.write(ByteBuffer.wrap(CreaMsg.creaStartDataMsg()));
+                //os.flush();
             } catch (Exception e) {
                 thread = null;
                 Activator.log(new Status(IStatus.ERROR, Activator.PLUGIN_ID, 0, "Error starting data stream", e)); //$NON-NLS-1$
@@ -498,6 +492,11 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
 
         // Forces the subscriptions update on startup
         subscriptionsChanged = true;
+        try {
+            sc.configureBlocking(false);
+        } catch (IOException e1) {
+            // Do nothing
+        }
 
         while (!isStopping()) {
             if (subscriptionsChanged) {
@@ -512,12 +511,13 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
 
             // Legge l'header di un messaggio (se c'e')
             try {
-                if ((n = is.read(bHeader)) == -1) {
+                ByteBuffer bb = ByteBuffer.wrap(bHeader);
+                if (sc.read(bb) <= 0) {
+                    Thread.sleep(100);
                     continue;
                 }
-                while (n < 4) {
-                    int r = is.read(bHeader, n, 4 - n);
-                    n += r;
+                while (bb.remaining() > 0) {
+                    sc.read(bb);
                 }
             } catch (Exception e) {
                 Activator.log(new Status(IStatus.ERROR, Activator.PLUGIN_ID, 0, "Error reading data", e)); //$NON-NLS-1$
@@ -532,10 +532,9 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
                 h.len = Util.getMessageLength(bHeader, 2);
                 byte mes[] = new byte[h.len];
                 try {
-                    n = is.read(mes);
-                    while (n < h.len) {
-                        int r = is.read(mes, n, h.len - n);
-                        n += r;
+                    ByteBuffer bb = ByteBuffer.wrap(mes);
+                    while (bb.remaining() > 0) {
+                        sc.read(bb);
                     }
                 } catch (Exception e) {
                 }
@@ -546,10 +545,10 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
                 }
                 else if (h.tipo == Message.TIP_ECHO) {
                     try {
-                        os.write(new byte[] {
+                        sc.write(ByteBuffer.wrap(new byte[] {
                             bHeader[0], bHeader[1], bHeader[2], bHeader[3], mes[0], mes[1]
-                        });
-                        os.flush();
+                        }));
+                        //os.flush();
                     } catch (Exception e) {
                         // Do nothing
                     }
@@ -572,30 +571,26 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
         }
 
         try {
-            os.write(CreaMsg.creaStopDataMsg());
-            os.flush();
+            sc.write(ByteBuffer.wrap(CreaMsg.creaStopDataMsg()));
+            //os.flush();
         } catch (Exception e) {
             Activator.log(new Status(IStatus.WARNING, Activator.PLUGIN_ID, 0, "Error stopping data stream", e)); //$NON-NLS-1$
         }
 
         try {
-            os.write(CreaMsg.creaLogoutMsg());
-            os.flush();
+            sc.write(ByteBuffer.wrap(CreaMsg.creaLogoutMsg()));
+            //os.flush();
         } catch (Exception e) {
             Activator.log(new Status(IStatus.ERROR, Activator.PLUGIN_ID, 0, "Error closing connection to streaming server", e)); //$NON-NLS-1$
         }
 
         try {
-            os.close();
-            is.close();
-            socket.close();
+            sc.close();
         } catch (Exception e) {
             Activator.log(new Status(IStatus.ERROR, Activator.PLUGIN_ID, 0, "Error closing connection to streaming server", e)); //$NON-NLS-1$
         }
 
-        os = null;
-        is = null;
-        socket = null;
+        sc = null;
 
         if (!isStopping()) {
             thread = new Thread(this, name + " - Data Reader"); //$NON-NLS-1$
@@ -644,8 +639,8 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
             for (int i = 0; i < flag.length; i++) {
                 flag[i] = 0;
             }
-            os.write(CreaMsg.creaPortMsg(CreaMsg.PORT_DEL, toRemove.toArray(new String[toRemove.size()]), flag));
-            os.flush();
+            sc.write(ByteBuffer.wrap(CreaMsg.creaPortMsg(CreaMsg.PORT_DEL, toRemove.toArray(new String[toRemove.size()]), flag)));
+            //os.flush();
         }
 
         if (toAdd.size() != 0) {
@@ -655,8 +650,8 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
             for (int i = 0; i < flag.length; i++) {
                 flag[i] = sTit2.contains(s[i]) || toAdd2.contains(s[i]) ? 105 : 0;
             }
-            os.write(CreaMsg.creaPortMsg(CreaMsg.PORT_ADD, s, flag));
-            os.flush();
+            sc.write(ByteBuffer.wrap(CreaMsg.creaPortMsg(CreaMsg.PORT_ADD, s, flag)));
+            //os.flush();
         }
 
         if (toAdd2.size() != 0 || toRemove2.size() != 0) {
@@ -678,8 +673,8 @@ public class StreamingConnector implements Runnable, IFeedConnector2, IExecutabl
                 for (int i = 0; i < flag.length; i++) {
                     flag[i] = toMod.get(s[i]).intValue();
                 }
-                os.write(CreaMsg.creaPortMsg(CreaMsg.PORT_MOD, s, flag));
-                os.flush();
+                sc.write(ByteBuffer.wrap(CreaMsg.creaPortMsg(CreaMsg.PORT_MOD, s, flag)));
+                //os.flush();
             }
         }
 
