@@ -1,4 +1,4 @@
-## eclipsetrader
+## EclipseTrader
 ![](https://github.com/eclipsequote/eclipsetrader/blob/master/001LcZePgy6WshwVqjQ4e.jpg)
 
 
