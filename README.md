@@ -1,4 +1,7 @@
-# eclipsetrader
+## eclipsetrader
+![](https://github.com/eclipsequote/eclipsetrader/blob/master/001LcZePgy6WshwVqjQ4e.jpg)
+
+
 Development Environment Setup
 EclipseTrader is developed using Eclipse 3.8 (Juno).
 
